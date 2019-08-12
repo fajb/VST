@@ -7,6 +7,36 @@ Module MainTheorem_statement
        (CC_correct: CompCert_correctness)
        (Args: ThreadSimulationArguments).
   Import CC_correct Args.
+
+  (* Temporary lemma for exposition. Deleete until ["Delete until here"]*)
+  Import Clight.
+  
+  (* We want to prove something like this. Maybe with extra assumptions, 
+     or (probably) the convers. In the end we want to unify the two predicates. *)
+  Lemma entry_point_problem:
+    forall src_m src_cpm,
+      Clight.entry_point
+        (Clight.globalenv C_program) src_m src_cpm (main_ptr C_program) nil ->
+      CSL_init_setup C_program src_m src_cpm.
+  Proof.
+    intros.
+    inversion H; subst.
+    econstructor; eauto.
+    - (* The two ways of getting an initial state:
+         LHS -  Clight_init_state, how the CSL proof defines initial states
+         RHS -  Clight.entry_point our new way of defining initial states 
+                (entry points)
+       *)
+      unfold Clight_init_state; simpl.
+      admit. (*The intialistaions don't match*)
+    - admit. (* We need some assumption about src_m *)
+    - admit. (* b0 comees out of nowhere. *)
+  Admitted.
+      
+
+      (* End of temporary exposition *)
+  Goal True.
+    idtac "Delete until here".
   
   Definition top2bottom_safety: Prop:=
     (* C program is proven to be safe in CSL*)
