@@ -74,8 +74,20 @@ Inductive corestate :=
                    (lid: option ident) (ve: env) (te: temp_env) (k: cont),
                 corestate.
 
+Fixpoint is_skip (s: statement) :=
+ match s with
+ | Sskip => true
+ | Slabel _ s' => is_skip s'
+ | Ssequence s1 s2 => andb (is_skip s1) (is_skip s2)
+ | _ => false
+ end.
+
 Fixpoint strip_skip (k: cont) : cont :=
- match k with Kseq Sskip :: k' => strip_skip k' | _ => k end.
+ match k with
+(* | Kseq Sbreak :: k' =>   need this too.... *)
+ | Kseq s :: k' => if is_skip s then strip_skip k' else k 
+ | _ => k 
+ end.
 
 Definition cl_at_external (c: corestate) : option (external_function * list val) :=
   match c with
@@ -230,8 +242,18 @@ Definition vret2v (vret: list val) : val :=
   match vret with v::nil => v | _ => Vundef end.
 
 (* Definition exit_syscall_number : ident := 1%positive. *)
+Fixpoint halted' (te: temp_env) (k: cont) : option val :=
+ match k with
+  | nil => Some match PTree.get 1%positive te with Some v => v | _ => Vundef end
+   | Kseq s :: k' => if is_skip s then halted' te k' else None
+   | _ => None
+  end.
 
-Definition cl_halted (c: corestate) : option val := None.
+Definition cl_halted (c: corestate) : option val := 
+  match c with
+  | State _ te k => halted' te k 
+  | _ => None
+  end.
 
 Definition empty_function : function := mkfunction Tvoid cc_default nil nil nil Sskip.
 
@@ -291,7 +313,7 @@ Definition cl_initial_core (ge: genv) (v: val) (args: list val) (q: corestate) :
                                  (map (fun x => Etempvar (fst x) (snd x))
                                       (params_of_types 2%positive
                                                        (params_of_fundef f)))) ::
-                          Kseq (Sloop Sskip Sskip) :: nil)
+                          nil)
         | _ => False end
       | _ => False end
     else False
@@ -309,7 +331,17 @@ Lemma cl_corestep_not_halted :
   forall ge m q m' q', cl_step ge q m q' m' -> cl_halted q = None.
 Proof.
   intros.
-  simpl; auto.
+  destruct q; try reflexivity.
+  unfold cl_halted.
+  induction k. inv H.
+  destruct a; try reflexivity.
+  unfold halted'; fold halted'.
+  destruct (is_skip s) eqn:?H; auto.
+  apply IHk; clear IHk.
+  revert k H; induction s; inv H0; intros.
+  inv H; auto.
+  rewrite andb_true_iff in H1; destruct H1. inv H. auto.
+  inv H; auto.
 Qed.
 
 Lemma cl_after_at_external_excl :
@@ -334,10 +366,13 @@ Program Definition cl_core_sem  (ge: genv):
                        /\ Ple (Genv.genv_next ge) (Mem.nextblock m)  )
     (fun c _ => cl_at_external c)
     (fun ret c _ => cl_after_external ret c)
-    (fun c _ =>  False (*cl_halted c <> None*))
+    (fun c _ =>  cl_halted c <> None)
     (cl_step ge)
     _
     (cl_corestep_not_at_external ge).
+Next Obligation.
+apply cl_corestep_not_halted  in H. rewrite H. intro. apply H0; auto.
+Defined.
 
 Lemma cl_corestep_fun: forall ge m q m1 q1 m2 q2,
     cl_step ge q m q1 m1 ->

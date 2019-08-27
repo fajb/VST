@@ -238,12 +238,9 @@ specialize (HP ora jm H6 H7 H8).
 destruct (@level rmap _ m').
 constructor.
 apply convergent_controls_jsafe with (State ve te k); auto.
-simpl.
-
 intros.
 destruct H9 as [? [? ?]].
 split3; auto.
-
 econstructor; eauto.
 Qed.
 
@@ -258,7 +255,11 @@ Proof.
   { eapply juicy_core_sem_preserves_corestep_fun with (csem := cl_core_sem ge); eauto. }
   inv H0; auto.
   setoid_rewrite (semantics.corestep_not_at_external (juicy_core_sem _)) in H2; eauto; congruence.
-  contradiction.
+  destruct H.
+  clear - H H1.
+  eapply semantics.corestep_not_halted in H.
+  instantiate (1:=i) in H.
+ contradiction.
 Qed.
 
 Lemma semax_unfold {CS: compspecs} {Espec: OracleKind}:
@@ -655,17 +656,30 @@ Proof.
 intros.
  apply prop_ext.
  induction k; intros; split; simpl; intros; try destruct IHk; auto.
- destruct a; try destruct s; auto.
-  constructor; auto.
- destruct a; try destruct s; auto.
- inv H. auto.
+-
+ destruct a; auto.
+ destruct (is_skip s) eqn:?H; auto.
+ apply H0 in H; clear H0. clear H1.
+ revert k H; induction s; try inv H2; intros.
+ constructor; auto.
+ constructor. rewrite andb_true_iff in H0; destruct H0; auto.
+ constructor; auto.
+-
+ destruct a; auto.
+ destruct (is_skip s) eqn:?H; auto.
+ apply H1. 
+ clear - H H2.
+ revert k H; induction s; intros; inv H2; inv H; auto.
+ rewrite andb_true_iff in H1; destruct H1; auto.
 Qed.
 (* END lemmas duplicated *)
 
  Lemma strip_skip_app:
   forall k k', strip_skip k = nil -> strip_skip (k++k') = strip_skip k'.
-Proof. induction k; intros; auto. destruct a; inv H. destruct s; inv H1; auto.
-  simpl. apply IHk. auto.
+Proof. induction k; intros; auto. destruct a; inv H.
+ simpl.
+ destruct (is_skip s) eqn:?H; auto.
+ inv H1.
 Qed.
 
 Lemma strip_strip: forall k, strip_skip (strip_skip k) = strip_skip k.
@@ -673,9 +687,8 @@ Proof.
 induction k; simpl.
 auto.
 destruct a; simpl; auto.
-destruct (dec_skip s).
-subst; auto.
-destruct s; auto.
+destruct (is_skip s) eqn:?H; auto.
+simpl. rewrite H. auto.
 Qed.
 
 Lemma strip_skip_app_cons:
@@ -683,8 +696,8 @@ Lemma strip_skip_app_cons:
 Proof. intros. revert k H;  induction k; intros. inv H.
   destruct a; try solve [simpl in *; auto];
   try solve [simpl in *; rewrite cons_app'; rewrite H; auto].
- destruct (dec_skip s). subst. simpl in *; auto.
- destruct s; inv H; simpl; auto.
+  simpl in *; destruct (is_skip s) eqn:?H; auto.
+  inv H. auto.
 Qed.
 
 
@@ -789,40 +802,71 @@ Proof.
   apply age_level in H. omega.
 Qed.
 
-Lemma safe_seq_skip {Espec: OracleKind} ge n ora ve te k m :
+Lemma safe_seq_skip {Espec: OracleKind} ge n ora ve te s k m :
+  is_skip s = true ->
   jsafeN OK_spec ge n ora (State ve te k) m ->
-  jsafeN OK_spec ge n ora (State ve te (Kseq Sskip :: k)) m.
+  jsafeN OK_spec ge n ora (State ve te (Kseq s :: k)) m.
 Proof.
-inversion 1; subst. constructor.
-econstructor; eauto. simpl. destruct H0 as (?&?&?). split3; eauto.
-eapply step_skip; eauto.
+inversion 2; subst. constructor.
+econstructor; eauto. simpl. destruct H1 as (?&?&?). split3; eauto.
+-
+clear - H H1.
+simpl in *.
+revert k H1; induction s; intros; try discriminate H.
+constructor; auto.
+constructor.
+simpl in H. rewrite andb_true_iff in H; destruct H.
+apply IHs1; auto.
+constructor.
+apply IHs; auto.
+-
 simpl in *; congruence.
-contradiction.
+-
+apply jsafeN_halted with i.
+simpl. rewrite H; auto.
+auto.
 Qed.
 
-Lemma safe_seq_skip' {Espec: OracleKind} ge n ora ve te k m :
-  jsafeN OK_spec ge n ora (State ve te (Kseq Sskip :: k)) m ->
+Lemma safe_seq_skip' {Espec: OracleKind} ge n ora ve te s k m :
+  is_skip s = true ->
+  jsafeN OK_spec ge n ora (State ve te (Kseq s :: k)) m ->
   jsafeN OK_spec ge n ora (State ve te k) m.
 Proof.
-inversion 1; subst. constructor.
-econstructor; eauto. simpl. destruct H0 as (?&?&?). split3; eauto.
-inv H0; auto.
+inversion 2; subst.
+econstructor; eauto.
+econstructor; eauto.
+simpl.
+destruct H1 as (?&?&?).
+split3; eauto.
+-
+clear - H1 H.
+simpl in *.
+revert k H1; induction s; intros; inv H.
+inv H1; auto.
+rewrite andb_true_iff in H2; destruct H2.
+inv H1.
+auto.
+inv H1; auto.
+-
 simpl in *; congruence.
-contradiction.
+-
+apply jsafeN_halted with i; auto.
+simpl in H1. rewrite H in H1; auto.
 Qed.
 
 Lemma safe_step_forward {Espec: OracleKind}:
   forall psi n ora st m,
    cl_at_external st = None ->
+   cl_halted st = None ->
    jsafeN (@OK_spec Espec) psi (S n) ora st m ->
  exists st', exists m',
    jstep (cl_core_sem psi) st m st' m' /\ jm_bupd ora (jsafeN (@OK_spec Espec) psi n ora  st') m'.
 Proof.
  intros.
- inv H0.
+ inv H1.
  eexists; eexists; split; eauto.
- simpl in H2; rewrite H2 in H; congruence.
- contradiction.
+ simpl in H3; rewrite H3 in H; congruence.
+ simpl in H2. congruence.
 Qed.
 
 Lemma safeN_strip {Espec: OracleKind}:
@@ -835,12 +879,15 @@ Proof.
  constructor. constructor.
  apply prop_ext; split; intros H.
  { induction k. simpl in H. auto. destruct a; auto.
-   destruct (dec_skip s); subst.
-   simpl in H|-*. apply IHk in H. apply safe_seq_skip; auto.
+   simpl in H|-*. 
+   destruct (is_skip s) eqn:?H.
+   apply IHk in H.
+   apply safe_seq_skip; auto.
    destruct s; simpl in *; congruence. }
  { induction k. simpl. auto. destruct a; auto.
-   destruct (dec_skip s); subst.
-   simpl in *. apply IHk. apply safe_seq_skip'; auto.
+   simpl in *.
+   destruct (is_skip s) eqn:?H.
+   apply IHk. eapply safe_seq_skip'; eauto.
    destruct s; simpl in *; congruence. }
 Qed.
 
@@ -1012,11 +1059,12 @@ Lemma corestep_preservation_lemma {Espec: OracleKind}:
       control_as_safe ge (S n) ctl1 ctl2 ->
       jstep (cl_core_sem ge) (State ve te (c :: l ++ ctl1)) m c' m' ->
       jm_bupd ora (jsafeN (@OK_spec Espec) ge n ora c') m' ->
+   cl_halted (State ve te ctl2) = None ->
    exists c2 : corestate,
      exists m2 : juicy_mem,
        jstep (cl_core_sem ge) (State ve te (c :: l ++ ctl2)) m c2 m2 /\
        jm_bupd ora (jsafeN (@OK_spec Espec) ge n ora c2) m2.
-Proof. intros until m'. intros H0 H4 CS0 H H1.
+Proof. intros until m'. intros H0 H4 CS0 H H1 HALT.
   remember (State ve te (c :: l ++ ctl1)) as q. rename c' into q'.
   destruct H as [H [Hb [Hc Hg]]].
   remember (m_dry m) as dm; remember (m_dry m') as dm'.
@@ -1062,6 +1110,7 @@ Proof. intros until m'. intros H0 H4 CS0 H H1.
     simpl in H.
    assert (jsafeN (@OK_spec Espec) ge (S n) ora (State ve te ctl1) m0).
    { econstructor; eauto; split3; eauto. }
+   clear IHcl_step.
    apply CS0 in H2; auto.
     eapply safe_step_forward in H2; auto.
    destruct H2 as [st2 [m2 [? ?]]]; exists st2; exists m2; split; auto.
@@ -1289,10 +1338,12 @@ Lemma control_suffix_safe {Espec: OracleKind}:
       ge n ctl1 ctl2 k,
       filter_seq ctl1 = filter_seq ctl2 ->
       control_as_safe ge n ctl1 ctl2 ->
+      (forall ve te, cl_halted (State ve te ctl2) = None) ->
       control_as_safe ge n (k ++ ctl1) (k ++ ctl2).
   Proof.
     intro ge. induction n using (well_founded_induction lt_wf).
-    intros. hnf; intros.
+    intros. rename H2 into HALT.
+    hnf; intros.
     destruct n'; [ constructor | ].
     assert (forall k, control_as_safe ge n' (k ++ ctl1) (k ++ ctl2)).
     intro; apply H; auto. apply control_as_safe_le with n; eauto. omega.
@@ -1312,7 +1363,15 @@ Lemma control_suffix_safe {Espec: OracleKind}:
    econstructor; eauto.
    eapply control_as_safe_le; eauto.
   simpl in H7. congruence.
-  simpl in H6. unfold cl_halted in H6. contradiction.
+  simpl in H6.
+  destruct c; try congruence.
+  destruct (is_skip s) eqn:?H; try congruence.
+  elimtype False; clear - H5 H3.
+  revert s l H5 H3; induction k; simpl; intros; try congruence.
+  destruct a; try discriminate.
+  destruct (is_skip s0) eqn:?H.
+  apply IHk in H5; auto.
+  inv H5. congruence.
 Qed.
 
 Lemma guard_safe_adj {Espec: OracleKind}:
@@ -1765,7 +1824,9 @@ inversion 1; subst.
 + econstructor; eauto. simpl. destruct H0 as (?&?&?). split3; eauto. 
   simpl in H0. simpl. eapply step_label; trivial.
 + simpl in *; congruence.
-+ simpl in *. unfold cl_halted in H0. contradiction.
++ 
+ apply jsafeN_halted with i.  simpl. auto.
+ auto.
 Qed.
 
 Lemma semax_Slabel {cs:compspecs} {Espec: OracleKind}

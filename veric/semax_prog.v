@@ -1527,6 +1527,10 @@ Proof.
       subst a.
       change Clight_new.true_expr with true_expr.
       change (level (m_phi jm)) with (level jm).
+
+Search  Genv.init_mem.
+
+red. red.
       apply safe_loop_skip.
 (*    +rewrite HGG. apply cenv_sub_refl.*)
     + unfold glob_types, Delta1. simpl @snd.
