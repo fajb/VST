@@ -287,6 +287,7 @@ Definition threads_safety m (tp : jstate ge) PHI (mcompat : mem_compatible_with 
       exists q_new,
       veric.Clight_core.cl_initial_core ge v1 (v2 :: nil) q_new /\
       jsafe_phi ge n ora q_new (getThreadR cnti)
+    | Khalt _ => Logic.True
     end.
 
 (* Havent' move this, but it's already defined in the concurrent_machien...

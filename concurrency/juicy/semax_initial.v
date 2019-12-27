@@ -336,7 +336,7 @@ Section Initial_State.
 
     - (*! safety of the only thread *)
       intros i cnti ora.
-      destruct (getThreadC cnti) as [c|c|c v|v1 v2] eqn:Ec; try discriminate; [].
+      destruct (getThreadC cnti) as [c|c|c v| ret |v1 v2] eqn:Ec; try discriminate; [].
       destruct i as [ | [ | i ]]. 2: now inversion cnti. 2:now inversion cnti.
       (* the initial juicy has got to be the same as the one given in initial_mem *)
       assert (Ejm: jm = jm_ cnti compat).

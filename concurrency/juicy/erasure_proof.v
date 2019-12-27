@@ -4938,22 +4938,39 @@ inversion MATCH; subst.
     destruct Htid as [Htid|Htid]; [left|right].
     + unfold not; simpl; intros.
       apply Htid. inversion MATCH; apply mtch_cnt'; assumption.
-    +
-       destruct Htid as [cnt [c [? ?]]].
+    + destruct Htid as [cnt [ret ?]].
        pose proof (MTCH_cnt MATCH cnt).
-       destruct H.
-       exists H0, c,x. split; auto.
-      eapply MTCH_getThreadC; eauto.
-      }
-
+       exists H0, ret. eauto.
+       eapply MTCH_getThreadC; eauto.
+  }
+  
+* (*Halt_Step*)
+  { inversion MATCH; subst.
+  inversion Htstep; subst.
+  exists (updThreadC (mtch_cnt _ ctn) (Khalt ret)).
+  split;[|split]; eauto.
+  (*Invariant*)
+  { apply updThreadC_invariant ; assumption. }
+  (*Match *)
+  { apply MTCH_updt; assumption.        }
+  (*Step*)
+  { exists nil; rewrite <- app_nil_end.
+    econstructor 7; try eassumption.
+    - simpl. reflexivity.
+    - simpl. econstructor; try eassumption.
+      + eapply MTCH_compat; eauto.
+      + eapply MTCH_getThreadC; eauto.
+      + reflexivity. } }
+  
   Grab Existential Variables.
-(*  - simpl. apply mtch_cnt. assumption.*)
-  - assumption.
-  - assumption.
-  - assumption.
-  -  admit. (* preserve mem_wd in Concur.invariant *)
-  - admit. (* preserve globals_not_fresh in Concur.invariant *) 
- Admitted.
+    (*  - simpl. apply mtch_cnt. assumption.*)
+    - eapply MTCH_cnt; eauto.
+    - assumption.
+    - assumption.
+    - assumption.
+    - simpl. admit. (* preserve mem_wd in Concur.invariant *)
+    - admit. (* preserve globals_not_fresh in Concur.invariant *) 
+  Admitted.
 
   Lemma core_diagram:
     forall (m : Mem.mem)  (U0 U U': schedule) rmap pmap

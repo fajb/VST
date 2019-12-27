@@ -178,6 +178,7 @@ Definition ctl_wellformed {res : semantics.Resources} {sem: semantics.Semantics}
                               /\ semantics.at_external (semantics.csem (msem (@semantics.semSem sem))) q m <> None
     | Kresume q v => core_wellformed (Mem.nextblock m) q /\ semantics.at_external (semantics.csem (msem (@semantics.semSem sem))) q m <> None /\ v = Vundef
     | Kinit v1 v2 => val_wellformed (Mem.nextblock m) v1 /\ val_wellformed (Mem.nextblock m) v2
+    | Khalt _ => True
     end.
 
 Definition threads_wellformed

@@ -315,6 +315,21 @@ Module HybridMachineSig.
   Definition suspend_thread: forall (m: mem) {tid0 ms},
       containsThread ms tid0 -> machine_state -> Prop:=
     @suspend_thread'.
+  
+  Inductive halt_thread': forall m {tid0} {ms:machine_state},
+      containsThread ms tid0 -> machine_state -> Prop:=
+  | HaltThread: forall m tid0 ms ms' c ret
+                  (ctn: containsThread ms tid0)
+                  (Hcmpt: mem_compatible ms m)
+                  (Hcode: getThreadC ctn = Krun c)
+                  (Hhalted: halted semSem c ret)
+                  (Hinv: invariant ms)
+                  (Hms': updThreadC ctn (Khalt ret) = ms'),
+      halt_thread' m ctn ms'.
+  Definition halt_thread: forall (m: mem) {tid0 ms},
+      containsThread ms tid0 -> machine_state -> Prop:=
+    @halt_thread'.
+  
     (** Provides control over scheduling. For example,
         for FineMach this is schedSkip, for CoarseMach this is just id *)
   Class Scheduler :=
@@ -364,12 +379,20 @@ Module HybridMachineSig.
         forall tid U U' ms m tr
           (HschedN: schedPeek U = Some tid)
           (Htid: ~ containsThread ms tid \/
-                 exists (cnt: containsThread ms tid) c i,
-          getThreadC cnt = Krun c /\ halted semSem c i)
+                 exists (cnt: containsThread ms tid) ret,
+          getThreadC cnt = Khalt ret)
           (Hinv: invariant ms)
           (Hcmpt: mem_compatible ms m)
           (HschedS: schedSkip U = U'),        (*Schedule Forward*)
-          machine_step U tr ms m U' tr ms m.
+          machine_step U tr ms m U' tr ms m
+  | halt_step:
+        forall tid U U' ms ms' m tr
+          (HschedN: schedPeek U = Some tid)
+          (HschedS: schedSkip U = U')        (*Schedule Forward*)
+          (Htid: containsThread ms tid)
+          (Htstep:halt_thread m Htid ms'),
+          machine_step U tr ms m U' tr ms' m.
+        
 
     Definition MachStep (c:MachState) (m:mem)
                (c':MachState) (m':mem) :=
@@ -482,15 +505,22 @@ Module HybridMachineSig.
             (Htstep: syncStep isCoarse Htid Hcmpt ms' m' ev),
             external_step U tr ms m  U' (tr ++ [:: external tid ev]) ms' m'
       | schedfail':
-          forall tid U U' ms m tr
-            (HschedN: schedPeek U = Some tid)
+        forall tid U U' ms m tr
+          (HschedN: schedPeek U = Some tid)
           (Htid: ~ containsThread ms tid \/
-                 exists (cnt: containsThread ms tid) c i,
-          getThreadC cnt = Krun c /\ halted semSem c i)
-            (Hinv: invariant ms)
-            (Hcmpt: mem_compatible ms m)
-            (HschedS: schedSkip U = U'),        (*Schedule Forward*)
-            external_step U tr ms m U' tr ms m.
+                 exists (cnt: containsThread ms tid) ret,
+          getThreadC cnt = Khalt ret)
+          (Hinv: invariant ms)
+          (Hcmpt: mem_compatible ms m)
+          (HschedS: schedSkip U = U'),       (*Schedule Forward*)
+            external_step U tr ms m U' tr ms m
+      | halt_step':
+        forall tid U U' ms ms' m tr
+          (HschedN: schedPeek U = Some tid)
+          (HschedS: schedSkip U = U')        (*Schedule Forward*)
+          (Htid: containsThread ms tid)
+          (Htstep:halt_thread m Htid ms'),
+          external_step U tr ms m U' tr ms' m.
 
       (*Symmetry*)
       (* These steps are basically the same: *)
@@ -523,7 +553,8 @@ Module HybridMachineSig.
                  solve[econstructor 2 ; eauto]|
                  solve[econstructor 4 ; eauto]|
                  solve[econstructor 5 ; eauto]|
-                 solve[econstructor 6 ; eauto]].
+                 solve[econstructor 6 ; eauto]|
+                 solve[econstructor 7 ; eauto]].
       Qed.
 
       Set Printing Implicit.
@@ -687,6 +718,10 @@ Module HybridMachineSig.
           eapply AngelSafe; [|intro; eapply IHn0; eauto].
           erewrite cats0.
           eapply schedfail; eauto.
+        - subst.
+          eapply AngelSafe; [|intro; eapply IHn0; eauto].
+          erewrite cats0.
+          eapply halt_step; eauto.
       Qed.
 
       Lemma csafe_concur_safe: forall U tr tp m n, csafe (U, tr, tp) m n -> concur_safe U tp m n.
@@ -733,6 +768,9 @@ Module HybridMachineSig.
           + eapply sync_step; eauto.
           + setoid_rewrite List.app_nil_r.
             eapply schedfail; eauto.
+        - inversion Htstep; subst.
+          instantiate(1:=nil); rewrite cats0.
+          eapply halt_step; eauto.
       Qed.
 
       (** Trace of the coarse-grained machine*)

@@ -3,6 +3,7 @@ From mathcomp.ssreflect Require Import ssreflect ssrbool ssrnat ssrfun eqtype se
 
 Require Import compcert.common.Memory.
 Require Import compcert.common.Values. (*for val*)
+Require Import compcert.lib.Integers.
 Require Import VST.concurrency.common.scheduler.
 Require Import VST.concurrency.common.permissions.
 Require Import VST.concurrency.common.semantics.
@@ -23,6 +24,7 @@ Inductive ctl {cT:Type} : Type :=
 | Krun : cT -> ctl
 | Kblocked : cT -> ctl
 | Kresume : cT -> val -> ctl (* Carries the return value. Probably a unit.*)
+| Khalt : int -> ctl (* Carries the return value. *)
 | Kinit : val -> val -> ctl. (* vals correspond to vf and arg respectively. *)
 
 Definition EqDec: Type -> Type :=

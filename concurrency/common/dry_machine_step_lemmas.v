@@ -360,6 +360,7 @@ Module StepLemmas.
     exists U1'; econstructor 4; simpl; eauto.
     exists U1'; econstructor 5; simpl; eauto.
     exists U1'; econstructor 6; simpl; eauto.
+    exists U1'; econstructor 7; simpl; eauto.
   Qed.
 
   End StepLemmas.
@@ -2030,6 +2031,7 @@ Module StepType.
       end
     | Kblocked c => st = Concurrent
     | Kresume c _ => st = Internal
+    | Khalt _ => st = Internal
     end.
 
   Definition getStepType {i tp} (cnt : containsThread tp i) m st :=
@@ -2181,6 +2183,7 @@ Module StepType.
     - apply updThreadC_invariant; auto.
     - eapply ev_step_ax1 in Hcorestep.
       eapply corestep_invariant; simpl; eauto.
+    - now apply updThreadC_invariant.
     - now apply updThreadC_invariant.
   Qed.
 
