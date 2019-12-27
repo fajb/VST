@@ -420,13 +420,15 @@ Module ConcurMatch (CC_correct: CompCert_correctness)(Args: ThreadSimulationArgu
       | Krun_indi
       | Kblocked_indi
       | Kresume_indi
-      | Kinit_indi.
+      | Kinit_indi
+      | Khalt_indi.
       Definition get_indicator {T: Type} (st:@ctl T): state_indicator:=
         match st with
         | Krun _ => Krun_indi
         | Kblocked _ => Kblocked_indi
         | Kresume _ _ => Kresume_indi
         | Kinit _ _ => Kinit_indi
+        | Khalt _ => Khalt_indi
         end.
       Definition thread_indicator {Res Sem} i st cnt:=
         get_indicator (@getThreadC Res Sem i st cnt).          

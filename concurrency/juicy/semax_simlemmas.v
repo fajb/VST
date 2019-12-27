@@ -835,6 +835,7 @@ Definition thread_safety {Z} (Jspec : juicy_ext_spec Z) m ge (tp : jstate ge) PH
       exists q_new,
       Clight_core.cl_initial_core ge v1 (v2 :: nil)  q_new /\
       jsafe_phi Jspec ge n ora q_new (getThreadR cnti)
+    | Khalt ret => Logic.True
     end.
 
 Lemma mem_cohere'_res : forall m phi phi', mem_cohere' m phi ->

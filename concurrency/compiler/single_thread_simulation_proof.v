@@ -892,9 +892,6 @@ Admitted.
           admit.
       Admitted.
 
-      
-      
-      
       Lemma suspend_step_diagram:
         forall (m : option mem) (tge : HybridMachineSig.G) 
                (U : list nat) (st1 : ThreadPool (Some hb))
@@ -928,9 +925,8 @@ Admitted.
           List.Forall2 (inject_mevent mu) tr1 tr2 ->
           HybridMachineSig.schedPeek U = Some tid ->
           (~ ThreadPool.containsThread st1' tid \/
-         (exists (cnt : ThreadPool.containsThread st1' tid) (c : semC) i,
-             ThreadPool.getThreadC cnt = Krun c /\
-             halted (sem_coresem (HybridSem (Some hb))) c i)) ->
+         (exists (cnt : ThreadPool.containsThread st1' tid) ret,
+             ThreadPool.getThreadC cnt = Khalt ret)) ->
           HybridMachineSig.invariant st1' ->
           HybridMachineSig.mem_compatible st1' m1' ->
           exists
@@ -943,6 +939,29 @@ Admitted.
       Proof.
         admit.
         (* Easy  since there is no changes to memory. *)
+      Admitted.
+      
+      Lemma halt_step_diagram:
+        forall (m : option mem) (tge : HybridMachineSig.G) 
+               (U : list nat) (st1 : ThreadPool (Some hb))
+               (tr1 tr2 : HybridMachineSig.event_trace)
+               (st1' : ThreadPool (Some hb)) (m1' : mem)
+               (cd : option compiler_index) (st2 : ThreadPool (Some (S hb)))
+               (mu : meminj) (m2 : mem) (tid : nat)
+               (Htid : ThreadPool.containsThread st1 tid),
+          concur_match cd mu st1 m1' st2 m2 ->
+          List.Forall2 (inject_mevent mu) tr1 tr2 ->
+          HybridMachineSig.schedPeek U = Some tid ->
+          HybridMachineSig.halt_thread m1' Htid st1' ->
+          exists
+            (st2' : ThreadPool (Some (S hb))) (m2' : mem) 
+            (cd' : option compiler_index) (mu' : meminj),
+            concur_match cd' mu' st1' m1' st2' m2' /\
+            List.Forall2 (inject_mevent mu') tr1 tr2 /\
+            machine_semantics.machine_step (HybConcSem (Some (S hb)) m) tge
+                                           U tr2 st2 m2 (HybridMachineSig.schedSkip U) tr2 st2' m2'.
+      Proof.
+        admit. (* Easy  since there is no changes to memory. *)
       Admitted.
       
       Lemma machine_step_diagram:
@@ -979,6 +998,9 @@ Admitted.
 
         - (*schedfail. *) simpl.
           exists tr2; unshelve(eapply schedfail_step_diagram; eauto); eauto.
+          
+        - (*halt. *) simpl.
+          exists tr2; unshelve(eapply halt_step_diagram; eauto); eauto.
 
           Unshelve. all: eauto.
       Qed.

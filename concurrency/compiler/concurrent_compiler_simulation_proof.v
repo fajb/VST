@@ -66,7 +66,8 @@ Module Concurrent_correctness
       inv pool; [econstructor 1|
                  econstructor 2|
                  econstructor 3|
-                 econstructor 4]; eauto.
+                 econstructor 4|
+                 econstructor 5]; eauto.
     Defined.
     Definition lift_c_state:
       @OrdinalPool.t dryResources (@ClightMachine.DMS.DSem Clight_g) ->

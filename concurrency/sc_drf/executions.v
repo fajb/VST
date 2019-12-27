@@ -394,6 +394,7 @@ Module Executions.
       - exists [::]; erewrite cats0; econstructor 4; simpl; eauto.
       - exists [:: Events.external tid ev]; econstructor 5; simpl; eauto.
       - exists [::]; erewrite cats0; econstructor 6; simpl; eauto.
+      - exists [::]; erewrite cats0; econstructor 7; simpl; eauto.
     Qed.
 
     Lemma  multi_step_contra:
@@ -4186,10 +4187,23 @@ Module Executions.
               destruct (Hcontra ltac:(eauto) ltac:(eauto)) as [| Hcontra1]; [congruence | eapply Hcontra1; now eauto]).
       destruct (start_thread_det Htstep Htstep0); subst;
         now auto.
+      { destruct Hhalted as (?&?&?).
+        inv Htstep.
+        erewrite (cnt_irr _ _ _ x) in Hcode.
+        simpl in Hcode; rewrite H in Hcode. congruence. }
+        
       destruct (resume_thread_det Htstep Htstep0); subst;
         now auto.
+      { destruct Hhalted as (?&?&?).
+        inv Htstep.
+        erewrite (cnt_irr _ _ _ x) in Hcode.
+        simpl in Hcode; rewrite H in Hcode. congruence. }
       destruct (step_thread_det ESF Htstep Htstep0) as [? [? ?]]; subst;
         now auto.
+      { destruct Hhalted as (?&?&?).
+        inv Htstep.
+        erewrite (cnt_irr _ _ _ x) in Hcode.
+        simpl in Hcode; rewrite H in Hcode. congruence. }
       destruct (suspend_thread_det Htstep Htstep0); subst;
         now auto.
       destruct (sync_step_det Htstep Htstep0) as [? [? ?]]; subst;

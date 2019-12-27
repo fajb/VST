@@ -257,6 +257,7 @@ Section Progress.
         [ (* Krun *) ci
         | (* Kblocked *) ci
         | (* Kresume *) ci v
+        | (* Khalt*) ret
         | (* Kinit *) v1 v2 ].
 
     (* thread[i] is running *)
@@ -271,7 +272,7 @@ Section Progress.
         + reflexivity.
         + right. intros.
             destruct ci; inv Halted. destruct v0; inv H0. destruct c; inv H1.
-            exists cnti, (Returnstate (Vint i0) (Kstop t0)), i0. split; auto.
+            exists cnti, i0. auto.
             reflexivity.         
         + constructor.
         + eexists; eauto.

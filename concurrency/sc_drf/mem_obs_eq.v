@@ -4809,6 +4809,7 @@ here, this seems to have changed.*)
     | Krun c, Krun c' => core_inj f c c'
     | Kblocked c, Kblocked c' => core_inj f c c'
     | Kresume c arg, Kresume c' arg' => core_inj f c c' /\ val_obs f arg arg'
+    | Khalt ret, Khalt ret' => ret = ret'
     | _, _  => False
     end.
 
@@ -4820,6 +4821,7 @@ here, this seems to have changed.*)
     | Kblocked c => core_wd f c
     | Kresume c v => core_wd f c /\ valid_val f v
     | Kinit vf v => valid_val f vf /\ valid_val f v
+    | Khalt ret => True
     end.
 
   Lemma ctl_wd_incr : forall f f' c,
@@ -4881,6 +4883,7 @@ here, this seems to have changed.*)
   Proof.
     intros f f' m c Hwd Hf Hf'.
     destruct c; simpl in *;
+      auto;
     repeat match goal with
            | [H: _ /\ _ |- _] => destruct H
            | [|- _ /\ _] => split
@@ -4900,6 +4903,7 @@ here, this seems to have changed.*)
     intros i cnti.
     specialize (H i cnti).
     destruct (getThreadC cnti); simpl in *;
+      auto;
     repeat match goal with
            | [H: _ /\ _ |- _] => destruct H
            | [|- _ /\ _] => split
@@ -4939,7 +4943,7 @@ here, this seems to have changed.*)
       ctl_inj f c c.
   Proof.
     intros.
-    destruct c; simpl in *;
+    destruct c; simpl in *; auto;
     repeat match goal with
            |[H: _ /\ _ |- _] =>
             destruct H
